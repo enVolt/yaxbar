@@ -644,9 +644,8 @@ func (app *app) checkForUpdates(passive bool) {
 		log.Println("updates: AutoUpdate", app.settings.AutoUpdate)
 	}
 	u := update.Updater{
-		CurrentVersion: version,
-		//LatestReleaseGitHubEndpoint: "https://api.github.com/repos/matryer/xbar/releases/latest",
-		LatestReleaseGitHubEndpoint: "https://api.github.com/repos/matryer/xbar/releases/latest",
+		CurrentVersion:              version,
+		LatestReleaseGitHubEndpoint: "https://api.github.com/repos/enVolt/yaxbar/releases/latest",
 		Client:                      &http.Client{Timeout: 10 * time.Minute},
 		SelectAsset: func(release update.Release, asset update.Asset) bool {
 			// look for the zip file
@@ -706,8 +705,8 @@ func (app *app) checkForUpdates(passive bool) {
 		}
 		response, err := app.runtime.Dialog.Message(&dialog.MessageDialog{
 			Type:          dialog.QuestionDialog,
-			Title:         "Update xbar?",
-			Message:       fmt.Sprintf("xbar %s is now available (you have %s).\n\nWould you like to update?", latest.TagName, u.CurrentVersion),
+			Title:         "Update yaxbar?",
+			Message:       fmt.Sprintf("yaxbar %s is now available (you have %s).\n\nWould you like to update?", latest.TagName, u.CurrentVersion),
 			Buttons:       []string{"Update", "Later"},
 			DefaultButton: "Update",
 			CancelButton:  "Later",
@@ -736,7 +735,7 @@ func (app *app) checkForUpdates(passive bool) {
 			_, err := app.runtime.Dialog.Message(&dialog.MessageDialog{
 				Type:         dialog.InfoDialog,
 				Title:        "Update successful",
-				Message:      "Please restart xbar for the changes to take effect.",
+				Message:      "Please restart yaxbar for the changes to take effect.",
 				Buttons:      []string{"OK"},
 				CancelButton: "OK",
 			})
