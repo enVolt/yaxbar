@@ -2,8 +2,8 @@
 
 set -e
 
-VERSION=`git describe --tags`
-echo -n $VERSION > .version
+VERSION="${VERSION:-$(git describe --tags --always 2>/dev/null || echo "v2.2.2-beta")}"
+echo -n "${VERSION}" > .version
 
 go test
 

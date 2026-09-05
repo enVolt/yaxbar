@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-VERSION=`git describe --tags`
+VERSION="${VERSION:-$(git describe --tags --always 2>/dev/null || echo "v2.2.2-beta")}"
 
 echo ""
-echo "  xbar ${VERSION}..."
+echo "  yaxbar ${VERSION}..."
 echo ""
-echo -n $VERSION > .version
-
-wails build -o xbar
+echo -n "${VERSION}" > .version
+export PATH="$HOME/go/bin:$PATH"
+wails build -production -o yaxbar
