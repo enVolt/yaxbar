@@ -25,9 +25,13 @@ import (
 )
 
 var (
-	pluginDirectory = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "xbar", "plugins")
-	cacheDirectory  = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "xbar", "cache")
-	configFilename  = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "xbar", "xbar.config.json")
+	primaryPluginDirectory = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "yaxbar", "plugins")
+	legacyPluginDirectory  = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "xbar", "plugins")
+	pluginDirectories      = []string{primaryPluginDirectory, legacyPluginDirectory}
+
+	cacheDirectory       = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "yaxbar", "cache")
+	configFilename       = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "yaxbar", "yaxbar.config.json")
+	legacyConfigFilename = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "xbar", "xbar.config.json")
 
 	// concurrentIncomingURLs is the number of concurrent incoming URLs to handle at
 	// the same time.
@@ -85,7 +89,7 @@ type app struct {
 
 // newApp makes a new app.
 func newApp() (*app, error) {
-	settings, err := loadSettings(configFilename)
+	settings, err := loadSettings(configFilename, legacyConfigFilename)
 	if err != nil {
 		return nil, errors.Wrap(err, "loadSettings")
 	}
@@ -176,8 +180,8 @@ func (app *app) Start(runtime *wails.Runtime) {
 	app.PluginsService.runtime = runtime
 	app.CommandService.runtime = runtime
 	app.CommandService.clearCache = app.clearCache
-	// ensure the plugin directory is there
-	if err := os.MkdirAll(pluginDirectory, 0777); err != nil {
+	// ensure the primary plugin directory is there
+	if err := os.MkdirAll(primaryPluginDirectory, 0777); err != nil {
 		log.Println("failed to create plugin directory:", err)
 	}
 	app.RefreshAll()
@@ -214,12 +218,26 @@ func (app *app) RefreshAll() {
 		}
 		app.runtime.Menu.DeleteTrayMenu(m)
 	}
-	var err error
-	app.plugins, err = plugins.Dir(pluginDirectory)
-	if err != nil {
-		app.onErr(err.Error())
-		return
+	var allPlugins plugins.Plugins
+	seen := make(map[string]bool)
+	for _, dir := range pluginDirectories {
+		dirPlugins, err := plugins.Dir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			log.Printf("failed to read plugins from %s: %s\n", dir, err)
+			continue
+		}
+		for _, p := range dirPlugins {
+			fn := filepath.Base(p.Command)
+			if !seen[fn] {
+				seen[fn] = true
+				allPlugins = append(allPlugins, p)
+			}
+		}
 	}
+	app.plugins = allPlugins
 	app.pluginTrays = make(map[string]*menu.TrayMenu)
 	if len(app.plugins) == 0 {
 		// no plugins - use default
@@ -379,11 +397,7 @@ func (app *app) newXbarMenu(plugin *plugins.Plugin, asSubmenu bool) *menu.Menu {
 			Accelerator: keys.CmdOrCtrl("e"),
 			Click: func(_ *menu.CallbackData) {
 				app.runtime.Window.Show()
-				rel, err := filepath.Rel(pluginDirectory, plugin.Command)
-				if err != nil {
-					log.Println(err)
-					return
-				}
+				rel := filepath.Base(plugin.Command)
 				app.runtime.Events.Emit("xbar.browser.openInstalledPlugin", map[string]string{
 					"path": rel,
 				})
@@ -404,7 +418,7 @@ func (app *app) newXbarMenu(plugin *plugins.Plugin, asSubmenu bool) *menu.Menu {
 	items = append(items, menu.Separator())
 	items = append(items, &menu.MenuItem{
 		Type:     menu.TextType,
-		Label:    fmt.Sprintf("xbar (%s)", version),
+		Label:    fmt.Sprintf("YaxBar (%s)", version),
 		Disabled: true,
 	})
 	items = append(items, app.appUpdatesMenu)
@@ -413,13 +427,13 @@ func (app *app) newXbarMenu(plugin *plugins.Plugin, asSubmenu bool) *menu.Menu {
 	items = append(items, menu.Separator())
 	items = append(items, &menu.MenuItem{
 		Type:        menu.TextType,
-		Label:       "Quit xbar",
+		Label:       "Quit YaxBar",
 		Accelerator: keys.CmdOrCtrl("q"),
 		Click:       app.onQuitMenuClicked,
 	})
 	if asSubmenu {
 		m := menu.NewMenuFromItems(
-			menu.SubMenu("xbar", &menu.Menu{
+			menu.SubMenu("YaxBar", &menu.Menu{
 				Items: items,
 			}),
 		)
@@ -431,7 +445,7 @@ func (app *app) newXbarMenu(plugin *plugins.Plugin, asSubmenu bool) *menu.Menu {
 
 func (app *app) createDefaultMenus() {
 	app.defaultTrayMenu = &menu.TrayMenu{
-		Label: "xbar",
+		Label: "YaxBar",
 		Menu:  app.newXbarMenu(nil, false),
 	}
 }
@@ -441,7 +455,13 @@ func (app *app) onPluginsMenuClicked(_ *menu.CallbackData) {
 }
 
 func (app *app) onOpenPluginsFolderClicked(_ *menu.CallbackData) {
-	_ = app.CommandService.OpenPath(pluginDirectory)
+	targetDir := primaryPluginDirectory
+	if entries, err := os.ReadDir(primaryPluginDirectory); err == nil && len(entries) == 0 {
+		if legEntries, legErr := os.ReadDir(legacyPluginDirectory); legErr == nil && len(legEntries) > 0 {
+			targetDir = legacyPluginDirectory
+		}
+	}
+	_ = app.CommandService.OpenPath(targetDir)
 }
 
 func (app *app) onQuitMenuClicked(_ *menu.CallbackData) {
@@ -542,13 +562,9 @@ func (app *app) handleIncomingURL(url string) {
 			"path": incomingURL.Params.Get("path"),
 		})
 	case "refreshPlugin":
+		targetPath := incomingURL.Params.Get("path")
 		for _, plugin := range app.plugins {
-			rel, err := filepath.Rel(pluginDirectory, plugin.Command)
-			if err != nil {
-				log.Println("incoming URL: rel for this failed", err)
-				continue
-			}
-			if rel == incomingURL.Params.Get("path") {
+			if filepath.Base(plugin.Command) == targetPath || plugin.Command == targetPath {
 				plugin.TriggerRefresh()
 				return
 			}

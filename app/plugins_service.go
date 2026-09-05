@@ -129,11 +129,42 @@ func (p *PluginsService) GetFeaturedPlugins() ([]metadata.Plugin, error) {
 	return payload.Plugins, nil
 }
 
-// GetInstalledPlugins gets the installed plugins.
+// findPluginDir finds which directory an installed plugin lives in.
+func findPluginDir(installedPluginPath string) string {
+	primaryPath := filepath.Join(primaryPluginDirectory, installedPluginPath)
+	if _, err := os.Stat(primaryPath); err == nil {
+		return primaryPluginDirectory
+	}
+	legacyPath := filepath.Join(legacyPluginDirectory, installedPluginPath)
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPluginDirectory
+	}
+	return primaryPluginDirectory
+}
+
+// GetInstalledPlugins gets the installed plugins from both yaxbar and legacy xbar directories.
 func (p *PluginsService) GetInstalledPlugins() ([]plugins.InstalledPlugin, error) {
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
-	return plugins.GetInstalledPlugins(pluginDirectory)
+	var allInstalled []plugins.InstalledPlugin
+	seen := make(map[string]bool)
+	for _, dir := range pluginDirectories {
+		dirInstalled, err := plugins.GetInstalledPlugins(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		for _, ip := range dirInstalled {
+			fn := filepath.Base(ip.Path)
+			if !seen[fn] {
+				seen[fn] = true
+				allInstalled = append(allInstalled, ip)
+			}
+		}
+	}
+	return allInstalled, nil
 }
 
 // InstallPlugin installs the plugin described by the provided metadata.
@@ -164,7 +195,7 @@ func (p *PluginsService) InstallPlugin(plugin metadata.Plugin) (string, error) {
 		Client: &http.Client{
 			Timeout: 1 * time.Minute,
 		},
-		PluginDir: pluginDirectory,
+		PluginDir: primaryPluginDirectory,
 	}
 	pluginPath := "https://xbarapp.com/docs/plugins/" + plugin.Path + ".json"
 	pluginPathURL, err := url.Parse(pluginPath)
@@ -211,7 +242,7 @@ func (p *PluginsService) UninstallPlugin(installedPluginInfo UninstallPluginRequ
 		}
 	}
 	installer := &plugins.Installer{
-		PluginDir: pluginDirectory,
+		PluginDir: findPluginDir(installedPluginInfo.Path),
 	}
 	err := installer.Uninstall(installedPluginInfo.Path)
 	if err != nil {
@@ -234,8 +265,9 @@ type InstalledPluginMetadata struct {
 func (p *PluginsService) GetInstalledPluginMetadata(installedPluginPath string) (*InstalledPluginMetadata, error) {
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
+	dir := findPluginDir(installedPluginPath)
 	filename := filepath.Base(installedPluginPath)
-	b, err := os.ReadFile(filepath.Join(pluginDirectory, installedPluginPath))
+	b, err := os.ReadFile(filepath.Join(dir, installedPluginPath))
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +292,8 @@ func (p *PluginsService) LoadVariableValues(installedPluginPath string) (map[str
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
 	defer tickOS() // wait a beat
-	return plugins.LoadVariableValues(pluginDirectory, installedPluginPath)
+	dir := findPluginDir(installedPluginPath)
+	return plugins.LoadVariableValues(dir, installedPluginPath)
 }
 
 // SaveVariableValues saves the values for an installed plugin.
@@ -268,7 +301,8 @@ func (p *PluginsService) SaveVariableValues(installedPluginPath string, values m
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
 	defer tickOS() // wait a beat
-	return plugins.SaveVariableValues(pluginDirectory, installedPluginPath, values)
+	dir := findPluginDir(installedPluginPath)
+	return plugins.SaveVariableValues(dir, installedPluginPath, values)
 }
 
 // SetEnabled sets a plugin to enabled or disabled state, depending on the value of
@@ -277,7 +311,8 @@ func (p *PluginsService) SetEnabled(installedPluginPath string, enabled bool) (s
 	defer p.OnRefresh()
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
-	newPath, err := plugins.SetEnabled(pluginDirectory, installedPluginPath, enabled)
+	dir := findPluginDir(installedPluginPath)
+	newPath, err := plugins.SetEnabled(dir, installedPluginPath, enabled)
 	if err != nil {
 		return "", err
 	}
@@ -296,7 +331,8 @@ func (p *PluginsService) SetRefreshInterval(installedPluginPath string, refreshI
 	defer p.OnRefresh()
 	p.osLock.Lock()
 	defer p.osLock.Unlock()
-	newPath, newInterval, err := plugins.SetRefreshInterval(pluginDirectory, installedPluginPath, refreshInterval)
+	dir := findPluginDir(installedPluginPath)
+	newPath, newInterval, err := plugins.SetRefreshInterval(dir, installedPluginPath, refreshInterval)
 	if err != nil {
 		return nil, err
 	}
