@@ -2,6 +2,8 @@
 
 > Put anything into your macOS menu bar. A modern, maintained fork of [xbar](https://github.com/matryer/xbar).
 
+![YaxBar Screenshot](yaxbar.png)
+
 ---
 
 ## Why YaxBar?
