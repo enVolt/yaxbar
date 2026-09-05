@@ -8,4 +8,5 @@ echo "  yaxbar ${VERSION}..."
 echo ""
 echo -n "${VERSION}" > .version
 export PATH="$HOME/go/bin:$PATH"
-wails build -production -o yaxbar
+export GOFLAGS="-buildvcs=false"
+wails build -production -o YaxBar

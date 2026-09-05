@@ -3,6 +3,7 @@
 set -e
 
 export PATH="$HOME/go/bin:$PATH"
+export GOFLAGS="-buildvcs=false"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${VERSION:-$(git describe --tags --always 2>/dev/null || echo "v2.2.2-beta")}"
@@ -22,27 +23,27 @@ mkdir -p "${REPO_ROOT}/Casks"
 sed "s/0.0.0/${VERSION}/" ./build/darwin/Info.plist.src > ./build/darwin/Info.plist
 
 echo "Building universal binary..."
-CGO_LDFLAGS=-mmacosx-version-min=10.13 wails build -package -production -platform darwin/universal -o yaxbar
+CGO_LDFLAGS=-mmacosx-version-min=10.13 wails build -package -production -platform darwin/universal -o YaxBar
 
 cd ./build/bin/
 
 SIGNING_IDENTITY="${YAXBAR_SIGNING_IDENTITY:-${XBAR_SIGNING_IDENTITY:--}}"
 echo "Signing the binary with identity: ${SIGNING_IDENTITY}..."
-codesign --force --deep -s "${SIGNING_IDENTITY}" -o runtime -v "./yaxbar.app"
+codesign --force --deep -s "${SIGNING_IDENTITY}" -o runtime -v "./YaxBar.app"
 
 echo "Creating DMG..."
 if command -v create-dmg >/dev/null 2>&1; then
-    create-dmg ./yaxbar.app --overwrite --dmg-title "Install yaxbar" || true
+    create-dmg ./YaxBar.app --overwrite --dmg-title "Install YaxBar" || true
     mv yaxbar*.dmg "yaxbar.${VERSION}.dmg"
 else
     echo "Using native hdiutil to create DMG..."
     rm -f "yaxbar.${VERSION}.dmg"
-    hdiutil create -volname "yaxbar" -srcfolder ./yaxbar.app -ov -format UDZO "yaxbar.${VERSION}.dmg"
+    hdiutil create -volname "YaxBar" -srcfolder ./YaxBar.app -ov -format UDZO "yaxbar.${VERSION}.dmg"
 fi
 
 echo "Zipping..."
 rm -f "yaxbar.${VERSION}.zip"
-zip -r -y "yaxbar.${VERSION}.zip" ./yaxbar.app
+zip -r -y "yaxbar.${VERSION}.zip" ./YaxBar.app
 
 echo "Computing SHA256 checksums..."
 shasum -a 256 "yaxbar.${VERSION}.dmg" > "yaxbar.${VERSION}.dmg.sha256"
@@ -65,13 +66,13 @@ cask "yaxbar" do
   sha256 "${DMG_SHA}"
 
   url "https://github.com/enVolt/yaxbar/releases/download/v#{version}/yaxbar.v#{version}.dmg"
-  name "yaxbar"
+  name "YaxBar"
   desc "Put anything into your macOS menu bar (maintained xbar fork)"
   homepage "https://github.com/enVolt/yaxbar"
 
   auto_updates true
 
-  app "yaxbar.app"
+  app "YaxBar.app"
 
   zap trash: [
     "~/Library/Application Support/xbar",
