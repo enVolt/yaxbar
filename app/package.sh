@@ -69,6 +69,8 @@ cask "yaxbar" do
   desc "Put anything into your macOS menu bar (maintained xbar fork)"
   homepage "https://github.com/enVolt/yaxbar"
 
+  auto_updates true
+
   app "yaxbar.app"
 
   zap trash: [
