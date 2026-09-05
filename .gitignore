@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+.agents/
 app/frontend/package.json.md5
 xbarapp.com/public/docs/
 tools/sitegen/sitegen
