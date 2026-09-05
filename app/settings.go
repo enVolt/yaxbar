@@ -48,13 +48,23 @@ func (s *settings) setDefaults() {
 	}
 }
 
-func loadSettings(path string) (*settings, error) {
+func loadSettings(path string, legacyPaths ...string) (*settings, error) {
 	s := &settings{
 		path: path,
 	}
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// If primary doesn't exist, check for legacy settings to import
+			for _, lp := range legacyPaths {
+				if legacyData, lErr := ioutil.ReadFile(lp); lErr == nil {
+					if err := json.Unmarshal(legacyData, s); err == nil {
+						s.setDefaults()
+						_ = s.save()
+						return s, nil
+					}
+				}
+			}
 			// file not found - it's ok, just use defaults
 			s.setDefaults()
 			return s, nil
