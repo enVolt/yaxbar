@@ -248,6 +248,9 @@ type Asset struct {
 // appPathFromExecutable gets the .app path from the currently
 // running executable.
 func appPathFromExecutable(p string) (string, error) {
+	if strings.HasSuffix(p, "/Contents/MacOS/YaxBar") {
+		return strings.TrimSuffix(p, "/Contents/MacOS/YaxBar"), nil
+	}
 	if strings.HasSuffix(p, "/Contents/MacOS/yaxbar") {
 		return strings.TrimSuffix(p, "/Contents/MacOS/yaxbar"), nil
 	}

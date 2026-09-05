@@ -113,6 +113,10 @@ func TestAppPathFromExecutable(t *testing.T) {
 	appPath, err = appPathFromExecutable("/Applications/yaxbar.app/Contents/MacOS/yaxbar")
 	is.NoErr(err)
 	is.Equal(appPath, "/Applications/yaxbar.app")
+
+	appPath, err = appPathFromExecutable("/Applications/YaxBar.app/Contents/MacOS/YaxBar")
+	is.NoErr(err)
+	is.Equal(appPath, "/Applications/YaxBar.app")
 }
 
 func TestMatchingVersions(t *testing.T) {
