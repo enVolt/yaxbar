@@ -16,12 +16,12 @@ import (
 var version string
 
 func main() {
-	println("yaxbar", version)
+	println("YaxBar", version)
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
-	println("yaxbar exited")
+	println("YaxBar exited")
 }
 
 func run() error {
@@ -35,7 +35,7 @@ func run() error {
 		wailsLogLevel = logger.DEBUG
 	}
 	err = wails.Run(&options.App{
-		Title:             "yaxbar",
+		Title:             "YaxBar",
 		Width:             1080,
 		Height:            700,
 		MinWidth:          800,
