@@ -44,7 +44,7 @@ func run() error {
 		HideWindowOnClose: true,
 		Mac: &mac.Options{
 			WebviewIsTransparent:          true,
-			WindowBackgroundIsTranslucent: true,
+			WindowBackgroundIsTranslucent: false,
 			TitleBar:                      mac.TitleBarHiddenInset(),
 			Menu:                          app.appMenu,
 			ActivationPolicy:              mac.NSApplicationActivationPolicyAccessory,
