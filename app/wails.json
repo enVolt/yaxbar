@@ -1,6 +1,6 @@
 {
-    "name": "xbar",
-    "outputfilename": "xbar",
+    "name": "yaxbar",
+    "outputfilename": "yaxbar",
     "html": "frontend/public/index.html",
     "js": "frontend/public/bundle.js",
     "css": "frontend/public/bundle.css",

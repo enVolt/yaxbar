@@ -16,12 +16,12 @@ import (
 var version string
 
 func main() {
-	println("xbar", version)
+	println("yaxbar", version)
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
-	println("xbar exited")
+	println("yaxbar exited")
 }
 
 func run() error {
@@ -35,7 +35,7 @@ func run() error {
 		wailsLogLevel = logger.DEBUG
 	}
 	err = wails.Run(&options.App{
-		Title:             "xbar",
+		Title:             "yaxbar",
 		Width:             1080,
 		Height:            700,
 		MinWidth:          800,
@@ -49,8 +49,9 @@ func run() error {
 			Menu:                          app.appMenu,
 			ActivationPolicy:              mac.NSApplicationActivationPolicyAccessory,
 			URLHandlers: map[string]func(string){
-				// xbar://...
-				"xbar": app.handleIncomingURL,
+				// xbar://... and yaxbar://...
+				"xbar":   app.handleIncomingURL,
+				"yaxbar": app.handleIncomingURL,
 			},
 		},
 		ContextMenus: app.contextMenus,
